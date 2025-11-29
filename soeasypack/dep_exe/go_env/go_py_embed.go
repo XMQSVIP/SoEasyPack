@@ -74,7 +74,8 @@ func createSharedMemory() (windows.Handle, uintptr) {
 	}
 
 	memSize := len(zipData)
-	memoryName, _ = generateRandomString(8)
+	memoryName, _ := generateRandomString(8)
+	os.Setenv("MEMORY_NAME", memoryName)
 
 	securityAttrs := &windows.SecurityAttributes{
 		Length:        uint32(unsafe.Sizeof(windows.SecurityAttributes{})),
@@ -215,6 +216,11 @@ func main() {
 			pyDllPath = SEPHOME + "\\rundep\\python3.dll"
 			os.Setenv("pyDllPath", pyDllPath)
 			handle, addr := createSharedMemory()
+			if handle == 0 {
+			    MessageBox("异常", "程序将退出")
+				os.RemoveAll(currentDir) // 创建共享内存失败，删除临时目录
+				return
+			}
 			defer windows.CloseHandle(handle)
 			defer windows.UnmapViewOfFile(addr)
 			executable, _ := os.Executable()
@@ -275,6 +281,10 @@ func main() {
 		}
 
 	} else {
+	    memName := os.Getenv("MEMORY_NAME")
+        if memName != "" {
+            memoryName = memName
+        }
 		pyDllPath = os.Getenv("pyDllPath")
 		os.Setenv("isSubProcess", "1")
 	}
@@ -383,6 +393,7 @@ except Exception:
     print(e)
     ctypes.windll.user32.MessageBoxW(0, e, "错误", 0x10)
 `, memoryName, xorKey, mainPyCode)
+
 	// 切换工作目录
 	os.Chdir(SEPHOME + "\\rundep\\AppData")
 	// 加载 pythonxx.dll
