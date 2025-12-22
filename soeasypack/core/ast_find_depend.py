@@ -60,8 +60,6 @@ def add_depends(depends: set, special_pkgs: set):
                         file_name = file_name.split('.', 1)[0]
                         other_files[file_name] = file_path
 
-        has_pyside = False
-        has_pywebview = True if 'webview' in package_path else False
         # # 判断似乎否有 QtWebEngine
         if 'PySide' in package_path:
             has_pyside = True
