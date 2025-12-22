@@ -6,6 +6,7 @@ Created on 2024-11-30
 
 import os
 import csv
+import site
 import sys
 import time
 import shutil
@@ -46,6 +47,7 @@ def check_dependency_files(main_run_path, project_dir, check_dir=None, pack_mode
     if pack_mode == 3:
         my_logger.info('分析依赖文件...')
         dependency_files = analyze_depends(main_run_path, except_pkgs=except_packages)
+
         with open(dependency_file_csv, mode='w', newline='', encoding='utf-8') as fp:
             csv_writer = csv.writer(fp)
             for i in dependency_files:
@@ -128,6 +130,13 @@ def check_dependency_files(main_run_path, project_dir, check_dir=None, pack_mode
         time.sleep(1)
 
     dependency_files = get_dependency_list(csv_log_path, image_path, check_dir, pack_mode)
+
+    # for i in dependency_files:
+    #     if 'webview' in i:
+    #         for root, dirs, files in os.walk(f"{site_pkg_dir}/webview/lib/runtimes"):
+    #             for file in files:
+    #                 file_path = os.path.join(root, file)
+    #                 depends.add(file_path)
     # # 排除用户指定的第三方依赖包
     if except_packages:
         ready_remove_list = []
@@ -137,6 +146,17 @@ def check_dependency_files(main_run_path, project_dir, check_dir=None, pack_mode
                     ready_remove_list.append(i)
         for i in ready_remove_list:
             dependency_files.remove(i)
+
+    # 查找是否有以.pth结尾的文件
+    sp_path = None
+    current_env_py = sys.executable.replace('\\', '/')
+    sp_path_list = site.getsitepackages()
+    for i in sp_path_list:
+        if 'site-packages' in i:
+            sp_path = i
+            break
+    pth_files = [f for f in Path(sp_path).iterdir() if f.suffix == '.pth']
+    dependency_files.update(pth_files)
 
     if dependency_files:
         with open(dependency_file_csv, mode='w', newline='', encoding='utf-8') as fp:
@@ -205,7 +225,7 @@ def move_files(check_dir, project_dir, dependency_files):
             continue
         for filename in files:
             src_file = str(os.path.join(root, filename)).replace('\\', '/')
-            if src_file in dependency_files:
+            if src_file in dependency_files or src_file.endswith('.pth'):
                 continue
             else:
                 try:

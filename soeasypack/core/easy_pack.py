@@ -88,6 +88,7 @@ def copy_py_env(save_dir, main_run_path=None, pack_mode=0, monitoring_time=18, e
         if pack_mode == 3 and not embed_exe:
             dependency_files.add(os.path.join(base_env_dir, 'python.exe'))
         rundep_dir = Path.joinpath(Path(save_dir), 'rundep').resolve()
+
         my_logger.info("复制python环境...")
         with ThreadPoolExecutor() as executor:
             futures = []
@@ -532,7 +533,7 @@ def to_pack(main_py_path: str, save_dir: str = None,
 
     if not save_dir:
         # 获取桌面目录
-        save_dir = Path.joinpath(Path.home(), 'Desktop/pack_out')
+        save_dir = str(Path.joinpath(Path.home(), 'Desktop/pack_out'))
     os.makedirs(save_dir, exist_ok=True)
     if onefile:
         embed_exe = True
@@ -544,7 +545,7 @@ def to_pack(main_py_path: str, save_dir: str = None,
             my_logger.error(f'未找到依赖包文件：{requirements_path}')
             return
 
-    rundep_dir = str(save_dir) + '/rundep'
+    rundep_dir = save_dir + '/rundep'
     if force_copy_env:
         my_logger.info('强制复制环境')
         if os.path.exists(rundep_dir):

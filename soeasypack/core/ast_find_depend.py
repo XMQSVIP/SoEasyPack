@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import sys
+from pathlib import Path
 
 from soeasypack.core.re_find_pkg import find_pkgs, CHECK_PKGS, EXCLUDE_DIRS
 from soeasypack.lib.modulegraph2 import ModuleGraph, PyPIDistribution
@@ -60,6 +61,7 @@ def add_depends(depends: set, special_pkgs: set):
                         other_files[file_name] = file_path
 
         has_pyside = False
+        has_pywebview = True if 'webview' in package_path else False
         # # 判断似乎否有 QtWebEngine
         if 'PySide' in package_path:
             has_pyside = True
@@ -147,11 +149,16 @@ def add_depends(depends: set, special_pkgs: set):
                                     file_path = os.path.join(plugins_dir, i, file)
                                     add_depend_paths.append(file_path)
 
+
     for file_path in add_depend_paths:
         depends.add(file_path)
 
     current_env_dir = sys.prefix
     site_pkg_dir = os.path.join(current_env_dir, 'Lib\\site-packages')
+    # 查找是否有以.pth结尾的文件
+    for f in Path(site_pkg_dir).iterdir():
+        if f.suffix == '.pth':
+            depends.add(str(f))
 
     # #补充python目录下的dll
     base_env_dir = sys.base_prefix
@@ -161,9 +168,13 @@ def add_depends(depends: set, special_pkgs: set):
             depends.add(dll_file)
 
     # # 补充encodings
-    encodings_dir_files = ('gbk.py', 'latin_1.py', 'utf_8.py', 'utf_16_be.py', 'cp437.py')
-    for encodings_file in encodings_dir_files:
-        depends.add(os.path.join(base_env_dir, 'Lib', 'encodings', encodings_file))
+    # encodings_dir_files = ('gbk.py', 'latin_1.py', 'utf_8.py', 'utf_16_be.py', 'cp437.py')
+    # for encodings_file in encodings_dir_files:
+    #     depends.add(os.path.join(base_env_dir, 'Lib', 'encodings', encodings_file))
+    encodings_path = os.path.join(base_env_dir, 'Lib', 'encodings')
+    for f in os.listdir(encodings_path):
+        if f.endswith('.py'):
+            depends.add(os.path.join(encodings_path, f))
 
     # # 补充libxxx.dll
     dlls_dir = os.path.join(base_env_dir, 'DLLs')
@@ -205,6 +216,12 @@ def add_depends(depends: set, special_pkgs: set):
                 for root, dirs, files in os.walk(full_dir):
                     for f in files:
                         depends.add(os.path.join(root, f))
+    # # 补充pywebview
+    if 'webview' in special_pkgs:
+        for root, dirs, files in os.walk(f"{site_pkg_dir}/webview/lib/runtimes"):
+            for file in files:
+                file_path = os.path.join(root, file)
+                depends.add(file_path)
 
 
 def analyze_depends(main_script_path: str, except_pkgs: list = None):
@@ -254,6 +271,8 @@ def analyze_depends(main_script_path: str, except_pkgs: list = None):
                     special_pkgs.add('tkinter')
                 elif 'curl_cffi' in file_path:
                     special_pkgs.add('curl_cffi')
+                elif 'webview' in file_path:
+                    special_pkgs.add('webview')
 
                 depends.add(file_path)
 
